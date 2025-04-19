@@ -324,6 +324,6 @@ def chat_get(prompt: str = Query("just say hi")):
     return response.json()
 
 
-@app.get("/echo")
-def echo(prompt: str = Query("just say hi")):
-    return {"response": prompt}
+@app.get("/")
+def root():
+    return {"message": "Welcome to the Ollama API!"}
