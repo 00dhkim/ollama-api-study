@@ -13,7 +13,7 @@ app = FastAPI()
 
 MODEL = "gemma3:latest"
 OLLAMA_SERVER = "http://localhost:11434"
-TIMEOUT = 10
+TIMEOUT = 30
 
 
 class BattleState(BaseModel):
@@ -299,7 +299,7 @@ json 형식으로 로봇들의 대응방법을 출력합니다. 그 외의 내�
 def command(req: ChatRequest):
     prompt = build_prompt(req.state)
 
-    payload = {"model": MODEL, "prompt": prompt, "stream": False}
+    payload = {"model": MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.0, "top_p": 1.0, "top_k": 1, "repeat_penalty": 1.0, "seed": 42}}
 
     try:
         res = requests.post(
@@ -319,8 +319,9 @@ def chat_get(prompt: str = Query("just say hi")):
     response = requests.post(
         f"{OLLAMA_SERVER}/api/generate",
         json={"model": MODEL, "prompt": prompt, "stream": False},
-        timeout=10,  # Set the timeout value in seconds
+        timeout=30,  # Set the timeout value in seconds
     )
+    print(response.status_code, response.text)
     return response.json()
 
 
