@@ -337,6 +337,9 @@ def command(req: ChatRequest):
         },
     }
 
+    print("request prompt:")
+    print(prompt)
+
     try:
         res = requests.post(
             f"{OLLAMA_SERVER}/api/generate",
@@ -344,6 +347,10 @@ def command(req: ChatRequest):
             timeout=TIMEOUT,
         )
         res.raise_for_status()
+
+        print("response json:")
+        print(json.dumps(res.json(), ensure_ascii=False, indent=2))
+
     except requests.RequestException as e:
         raise HTTPException(status_code=502, detail=f"Ollama 호출 실패: {e}") from e
 
