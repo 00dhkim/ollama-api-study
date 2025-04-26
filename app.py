@@ -5,15 +5,40 @@ import os
 
 import requests
 from fastapi import FastAPI, HTTPException, Query
+from contextlib import contextmanager
 from pydantic import BaseModel
 from typing import Dict, List
-
-
-app = FastAPI()
 
 MODEL = "gemma3:latest"
 OLLAMA_SERVER = "http://localhost:11434"
 TIMEOUT = 30
+
+
+@contextmanager
+def lifespan(app: FastAPI):
+    """동기 requests로 Ollama warm-up, FastAPI ≥0.110 권장 방식."""
+    # ── startup ────────────────────────────────────────────────
+    try:
+        r = requests.post(
+            f"{OLLAMA_SERVER}/api/generate",
+            json={
+                "model": MODEL,
+                "prompt": "Testing. Just say hi and nothing else.",
+                "stream": False,
+            },
+            timeout=TIMEOUT,
+        )
+        r.raise_for_status()
+        print("✅ Ollama model pre-loaded")
+    except Exception as exc:
+        # 실패해도 앱 전체가 죽지 않도록 로그만 남김
+        print(f"⚠️  Warm-up failed: {exc}")
+    yield  # ← 여기서부터 서버가 요청을 받기 시작
+    # ── shutdown ───────────────────────────────────────────────
+    print("👋 Lifespan shutdown complete")
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 class BattleState(BaseModel):
@@ -299,7 +324,18 @@ json 형식으로 로봇들의 대응방법을 출력합니다. 그 외의 내�
 def command(req: ChatRequest):
     prompt = build_prompt(req.state)
 
-    payload = {"model": MODEL, "prompt": prompt, "stream": False, "options": {"temperature": 0.0, "top_p": 1.0, "top_k": 1, "repeat_penalty": 1.0, "seed": 42}}
+    payload = {
+        "model": MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "top_k": 1,
+            "repeat_penalty": 1.0,
+            "seed": 42,
+        },
+    }
 
     try:
         res = requests.post(
